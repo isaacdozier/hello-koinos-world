@@ -14,7 +14,7 @@ This is a minimal "Hello World" application for the Koinos blockchain. It consis
 ### View online
 
 Just visit the GitHub Pages link for this repository:
-https://your-username.github.io/koinos-hello-world/
+https://isaacdozier.github.io/hello-koinos-world/
 
 ### Run locally
 
