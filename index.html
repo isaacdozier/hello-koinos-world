@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello Koinos World</title>
+    <title>Koinos Hello World</title>
 </head>
 <body>
-    <h1>Hello Koinos World</h1>
+    <h1>Koinos Blockchain Hello World</h1>
     <button id="getInfo">Get Blockchain Info</button>
     <div id="loading" hidden>Loading...</div>
     <pre id="result"></pre>
@@ -21,7 +21,8 @@
             
             // Koinos RPC endpoints
             const endpoints = [
-                'https://api.koinos.io','https://api.koinosblocks.com'
+                'https://api.koinos.io',
+                'https://api.koinosblocks.com'
             ];
             
             try {
@@ -34,7 +35,7 @@
                         console.log(`Trying endpoint: ${endpoint}`);
                         
                         // Get head block info
-                        headInfoResponse = await fetch(endpoint, {
+                        const headInfoResponse = await fetch(endpoint, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -43,7 +44,10 @@
                                 method: 'chain.get_head_info',
                                 params: {}
                             })
-                        }).then(r => r.json()).then(data => data.result);
+                        }).then(r => r.json()).then(data => {
+                            console.log("Full head_info response:", JSON.stringify(data));
+                            return data.result;
+                        });
                         
                         // Get chain info
                         chainInfoResponse = await fetch(endpoint, {
@@ -68,40 +72,37 @@
                     throw new Error("All endpoints failed");
                 }
                 
-                // Display results
-                // Format timestamp properly - handle different timestamp formats
-                let formattedTime = "Unknown";
-                try {
-                    const timestamp = headInfoResponse.head_topology.timestamp;
-                    console.log("Raw timestamp:", timestamp, typeof timestamp);
+                // Display results with full response inspection
+                console.log("Full head_info object:", headInfoResponse);
+                console.log("Head topology:", headInfoResponse.head_topology);
+                
+                // Find timestamp - check different possible locations
+                let timestamp = "Unknown";
+                let blockHeight = "Unknown";
+                let blockId = "Unknown";
+                
+                if (headInfoResponse && headInfoResponse.head_topology) {
+                    blockHeight = headInfoResponse.head_topology.height || "Unknown";
+                    blockId = headInfoResponse.head_topology.id || "Unknown";
                     
-                    if (typeof timestamp === "string") {
-                        // If it's ISO format string
-                        formattedTime = new Date(timestamp).toLocaleString();
-                    } else if (typeof timestamp === "number") {
-                        // If it's a Unix timestamp (seconds)
-                        formattedTime = new Date(timestamp * 1000).toLocaleString();
+                    // Try different possible timestamp locations
+                    if (headInfoResponse.head_topology.timestamp !== undefined) {
+                        timestamp = headInfoResponse.head_topology.timestamp;
+                    } else if (headInfoResponse.timestamp !== undefined) {
+                        timestamp = headInfoResponse.timestamp;
+                    } else if (headInfoResponse.head_block_time !== undefined) {
+                        timestamp = headInfoResponse.head_block_time;
                     }
-                    
-                    // If still invalid, try alternative formats
-                    if (formattedTime.includes("Invalid")) {
-                        if (typeof timestamp === "number" && timestamp > 1600000000000) {
-                            // It might be in milliseconds already
-                            formattedTime = new Date(timestamp).toLocaleString();
-                        }
-                    }
-                } catch (e) {
-                    console.error("Error formatting timestamp:", e);
-                    formattedTime = "Error parsing date";
                 }
                 
                 resultDiv.textContent = `KOINOS BLOCKCHAIN INFO:
+Head Block Height: ${blockHeight}
+Block Time: ${timestamp} (raw value)
+Block ID: ${blockId}
+Chain ID: ${chainInfoResponse.chain_id}
+Using: ${usedEndpoint}
 
-                Head Block Height: ${headInfoResponse.head_topology.height}
-                Block Time: ${formattedTime}
-                Block ID: ${headInfoResponse.head_topology.id}
-                Chain ID: ${chainInfoResponse.chain_id}
-                Using: ${usedEndpoint}`;
+Note: Check browser console (F12) to see full response structure`;
                 
             } catch (error) {
                 resultDiv.textContent = `Error: ${error.message}`;
