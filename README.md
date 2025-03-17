@@ -6,7 +6,7 @@ A super simple webpage that connects to the Koinos blockchain and displays basic
 
 This is a minimal "Hello World" application for the Koinos blockchain. It consists of a single HTML file that:
 
-1. Makes a basic REST API call to the Koinos blockchain
+1. Makes a basic RPC call to the Koinos blockchain
 2. Displays information about the current state of the blockchain
 
 ## How to use
