@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koinos Blockchain Hello World</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        #result {
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+        .loading {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Koinos Blockchain Hello World</h1>
+    
+    <div class="container">
+        <p>This simple app demonstrates connecting to the Koinos blockchain and retrieving basic information.</p>
+        <button id="getInfo">Get Blockchain Info</button>
+        <div id="loading" class="loading">Loading...</div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const getInfoButton = document.getElementById('getInfo');
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+            
+            // Koinos RPC endpoints - uncomment the one you want to use
+            const rpcEndpoint = 'https://api.koinos.io/rpc'; // Main API
+            // const rpcEndpoint = 'https://api.koinosblocks.com/rpc'; // KoinosBlocks API
+            // const rpcEndpoint = 'https://harbinger-api.koinos.io/rpc'; // Harbinger testnet API
+            // const rpcEndpoint = 'https://api.burnkoin.com/rpc'; // Community node
+            
+            getInfoButton.addEventListener('click', async function() {
+                resultDiv.textContent = '';
+                loadingDiv.style.display = 'block';
+                
+                try {
+                    // Get head block info using the get_head_info RPC method
+                    const headInfoResponse = await fetchKoinosRPC('chain.get_head_info', {});
+                    
+                    // Get chain info
+                    const chainInfoResponse = await fetchKoinosRPC('chain.get_chain_id', {});
+                    
+                    // Format and display the results
+                    const formattedResult = `
+KOINOS BLOCKCHAIN INFORMATION:
+-----------------------------
+Head Block:
+- Block Height: ${headInfoResponse.head_topology.height}
+- Block Time: ${new Date(headInfoResponse.head_topology.timestamp * 1000).toLocaleString()}
+- Block ID: ${headInfoResponse.head_topology.id}
+
+Chain Information:
+- Chain ID: ${chainInfoResponse.chain_id}
+                    `;
+                    
+                    resultDiv.textContent = formattedResult;
+                } catch (error) {
+                    resultDiv.textContent = `Error: ${error.message}`;
+                    console.error('Error fetching blockchain info:', error);
+                } finally {
+                    loadingDiv.style.display = 'none';
+                }
+            });
+            
+            // Helper function to make RPC calls to Koinos
+            async function fetchKoinosRPC(method, params) {
+                const response = await fetch(rpcEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: 1,
+                        jsonrpc: '2.0',
+                        method: method,
+                        params: params
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(`RPC error: ${data.error.message}`);
+                }
+                
+                return data.result;
+            }
+        });
+    </script>
+</body>
+</html>
