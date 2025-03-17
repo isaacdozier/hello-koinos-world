@@ -69,10 +69,36 @@
                 }
                 
                 // Display results
+                // Format timestamp properly - handle different timestamp formats
+                let formattedTime = "Unknown";
+                try {
+                    const timestamp = headInfoResponse.head_topology.timestamp;
+                    console.log("Raw timestamp:", timestamp, typeof timestamp);
+                    
+                    if (typeof timestamp === "string") {
+                        // If it's ISO format string
+                        formattedTime = new Date(timestamp).toLocaleString();
+                    } else if (typeof timestamp === "number") {
+                        // If it's a Unix timestamp (seconds)
+                        formattedTime = new Date(timestamp * 1000).toLocaleString();
+                    }
+                    
+                    // If still invalid, try alternative formats
+                    if (formattedTime.includes("Invalid")) {
+                        if (typeof timestamp === "number" && timestamp > 1600000000000) {
+                            // It might be in milliseconds already
+                            formattedTime = new Date(timestamp).toLocaleString();
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error formatting timestamp:", e);
+                    formattedTime = "Error parsing date";
+                }
+                
                 resultDiv.textContent = `KOINOS BLOCKCHAIN INFO:
 
                 Head Block Height: ${headInfoResponse.head_topology.height}
-                Block Time: ${new Date(headInfoResponse.head_topology.timestamp * 1000).toLocaleString()}
+                Block Time: ${formattedTime}
                 Block ID: ${headInfoResponse.head_topology.id}
                 Chain ID: ${chainInfoResponse.chain_id}
                 Using: ${usedEndpoint}`;
