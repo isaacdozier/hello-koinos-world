@@ -57,11 +57,12 @@
             const resultDiv = document.getElementById('result');
             const loadingDiv = document.getElementById('loading');
             
-            // Koinos RPC endpoints - uncomment the one you want to use
-            const rpcEndpoint = 'https://api.koinos.io/rpc'; // Main API
-            // const rpcEndpoint = 'https://api.koinosblocks.com/rpc'; // KoinosBlocks API
-            // const rpcEndpoint = 'https://harbinger-api.koinos.io/rpc'; // Harbinger testnet API
-            // const rpcEndpoint = 'https://api.burnkoin.com/rpc'; // Community node
+            // Koinos RPC endpoints
+            const endpoints = [
+                'https://api.koinos.io', 'https://api.koinosblocks.com'
+            ];
+            // Default to the first endpoint
+            let currentEndpointIndex = 0;
             
             getInfoButton.addEventListener('click', async function() {
                 resultDiv.textContent = '';
@@ -85,6 +86,9 @@ Head Block:
 
 Chain Information:
 - Chain ID: ${chainInfoResponse.chain_id}
+
+Connection Information:
+- Using endpoint: ${endpoints[currentEndpointIndex]}
                     `;
                     
                     resultDiv.textContent = formattedResult;
@@ -96,32 +100,55 @@ Chain Information:
                 }
             });
             
-            // Helper function to make RPC calls to Koinos
+            // Helper function to make RPC calls to Koinos with endpoint fallback
             async function fetchKoinosRPC(method, params) {
-                const response = await fetch(rpcEndpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        id: 1,
-                        jsonrpc: '2.0',
-                        method: method,
-                        params: params
-                    })
-                });
+                // Try each endpoint until one works
+                let lastError;
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                for (let i = 0; i < endpoints.length; i++) {
+                    try {
+                        const endpointIndex = (currentEndpointIndex + i) % endpoints.length;
+                        const endpoint = endpoints[endpointIndex];
+                        
+                        console.log(`Trying endpoint: ${endpoint}`);
+                        
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                id: 1,
+                                jsonrpc: '2.0',
+                                method: method,
+                                params: params
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.error) {
+                            throw new Error(`RPC error: ${data.error.message}`);
+                        }
+                        
+                        // If we get here, the endpoint worked - use it as default next time
+                        currentEndpointIndex = endpointIndex;
+                        console.log(`Successfully used endpoint: ${endpoint}`);
+                        
+                        return data.result;
+                    } catch (error) {
+                        console.warn(`Endpoint failed: ${error.message}`);
+                        lastError = error;
+                        // Continue to the next endpoint
+                    }
                 }
                 
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(`RPC error: ${data.error.message}`);
-                }
-                
-                return data.result;
+                // If we get here, all endpoints failed
+                throw new Error(`All Koinos endpoints failed. Last error: ${lastError.message}`);
             }
         });
     </script>
