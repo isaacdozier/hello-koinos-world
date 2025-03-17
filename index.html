@@ -26,10 +26,10 @@
             ];
             
             try {
-                // Try each endpoint until one works
-                let headInfoResponse, chainInfoResponse;
+                let headInfoData, chainInfoData;
                 let usedEndpoint;
                 
+                // Try each endpoint until one works
                 for (const endpoint of endpoints) {
                     try {
                         console.log(`Trying endpoint: ${endpoint}`);
@@ -44,13 +44,16 @@
                                 method: 'chain.get_head_info',
                                 params: {}
                             })
-                        }).then(r => r.json()).then(data => {
-                            console.log("Full head_info response:", JSON.stringify(data));
-                            return data.result;
                         });
                         
+                        if (!headInfoResponse.ok) {
+                            throw new Error(`HTTP error: ${headInfoResponse.status}`);
+                        }
+                        
+                        headInfoData = await headInfoResponse.json();
+                        
                         // Get chain info
-                        chainInfoResponse = await fetch(endpoint, {
+                        const chainInfoResponse = await fetch(endpoint, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -59,50 +62,44 @@
                                 method: 'chain.get_chain_id',
                                 params: {}
                             })
-                        }).then(r => r.json()).then(data => data.result);
+                        });
+                        
+                        if (!chainInfoResponse.ok) {
+                            throw new Error(`HTTP error: ${chainInfoResponse.status}`);
+                        }
+                        
+                        chainInfoData = await chainInfoResponse.json();
                         
                         usedEndpoint = endpoint;
+                        console.log("Successfully connected to endpoint:", endpoint);
                         break;
                     } catch (e) {
                         console.warn(`Endpoint failed: ${e.message}`);
                     }
                 }
                 
-                if (!headInfoResponse || !chainInfoResponse) {
+                if (!headInfoData || !chainInfoData) {
                     throw new Error("All endpoints failed");
                 }
                 
-                // Display results with full response inspection
-                console.log("Full head_info object:", headInfoResponse);
-                console.log("Head topology:", headInfoResponse.head_topology);
+                // Extract values from the response
+                const topology = headInfoData.result.head_topology;
                 
-                // Find timestamp - check different possible locations
-                let timestamp = "Unknown";
-                let blockHeight = "Unknown";
-                let blockId = "Unknown";
-                
-                if (headInfoResponse && headInfoResponse.head_topology) {
-                    blockHeight = headInfoResponse.head_topology.height || "Unknown";
-                    blockId = headInfoResponse.head_topology.id || "Unknown";
-                    
-                    // Try different possible timestamp locations
-                    if (headInfoResponse.head_topology.timestamp !== undefined) {
-                        timestamp = headInfoResponse.head_topology.timestamp;
-                    } else if (headInfoResponse.timestamp !== undefined) {
-                        timestamp = headInfoResponse.timestamp;
-                    } else if (headInfoResponse.head_block_time !== undefined) {
-                        timestamp = headInfoResponse.head_block_time;
-                    }
+                // Format the timestamp - it's in milliseconds
+                let formattedTime = "Unknown";
+                if (headInfoData.result.head_block_time) {
+                    const timestamp = Number(headInfoData.result.head_block_time);
+                    formattedTime = new Date(timestamp).toLocaleString();
                 }
                 
+                // Display results
                 resultDiv.textContent = `KOINOS BLOCKCHAIN INFO:
-Head Block Height: ${blockHeight}
-Block Time: ${timestamp} (raw value)
-Block ID: ${blockId}
-Chain ID: ${chainInfoResponse.chain_id}
-Using: ${usedEndpoint}
-
-Note: Check browser console (F12) to see full response structure`;
+Head Block Height: ${topology.height}
+Block Time: ${formattedTime}
+Block ID: ${topology.id}
+Last Irreversible Block: ${headInfoData.result.last_irreversible_block}
+Chain ID: ${chainInfoData.result.chain_id}
+Using: ${usedEndpoint}`;
                 
             } catch (error) {
                 resultDiv.textContent = `Error: ${error.message}`;
